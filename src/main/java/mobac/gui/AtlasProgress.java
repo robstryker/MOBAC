@@ -399,7 +399,6 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	public void incMapDownloadProgress() {
 		data.mapDownloadProgress++;
 		data.totalProgress++;
-		updateGUI();
 	}
 
 	public void incMapCreationProgress() {
@@ -792,7 +791,9 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 
 	@Override
 	public void downloadJobComplete() {
+		incMapDownloadProgress();
 		setErrorCounter(atlasThread.getJobsRetryErrorCount(), atlasThread.getJobsPermanentErrorCount());
+		updateGUI();
 	}
 
 	@Override
