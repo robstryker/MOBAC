@@ -22,6 +22,7 @@ import java.awt.event.ActionListener;
 import javax.swing.JOptionPane;
 
 import mobac.exceptions.AtlasTestException;
+import mobac.gui.AtlasProgress;
 import mobac.gui.atlastree.JAtlasTree;
 import mobac.program.AtlasThread;
 import mobac.program.interfaces.AtlasInterface;
@@ -42,7 +43,10 @@ public class AtlasCreate implements ActionListener {
 			// able to modify settings of maps, layers and the atlas itself
 			// while the AtlasThread works on that atlas reference
 			AtlasInterface atlasToCreate = jAtlasTree.getAtlas().deepClone();
-			Thread atlasThread = new AtlasThread(atlasToCreate);
+			AtlasThread atlasThread = new AtlasThread(atlasToCreate);
+			AtlasProgress ap =  new AtlasProgress(atlasThread);
+			ap.setDownloadControlerListener(atlasThread);
+			atlasThread.addAtlasThreadListener(ap);
 			atlasThread.start();
 		} catch (AtlasTestException e) {
 			JOptionPane.showMessageDialog(null, "<html>" + e.getMessage() + "</html>",

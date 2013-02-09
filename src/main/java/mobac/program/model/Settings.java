@@ -50,6 +50,7 @@ import mobac.gui.panels.JCoordinatesPanel;
 import mobac.mapsources.MapSourcesManager;
 import mobac.program.DirectoryManager;
 import mobac.program.ProgramInfo;
+import mobac.utilities.SystemPropertyUtils;
 import mobac.utilities.Utilities;
 import mobac.utilities.stream.ThrottledInputStream;
 
@@ -69,6 +70,7 @@ public class Settings {
 	private static final String SYSTEM_PROXY_HOST = System.getProperty("http.proxyHost");
 	private static final String SYSTEM_PROXY_PORT = System.getProperty("http.proxyPort");
 
+	
 	@XmlElement(defaultValue = "")
 	private String version;
 
@@ -449,6 +451,10 @@ public class Settings {
 
 	@XmlTransient
 	public File getMapSourcesDirectory() {
+		// Add a system prop to override this via cmd line,; useful if running in scripts
+		if(System.getProperty(SystemPropertyUtils.MAPSOURCES_SYS_PROP) != null)
+			return new File(System.getProperty(SystemPropertyUtils.MAPSOURCES_SYS_PROP));
+		
 		String mapSourcesDirCfg = directories.mapSourcesDirectory;
 		File mapSourcesDir;
 		if (mapSourcesDirCfg == null || mapSourcesDirCfg.trim().length() == 0)

@@ -21,9 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 
 import mobac.exceptions.AtlasTestException;
 import mobac.exceptions.MapDownloadSkippedException;
@@ -42,23 +43,17 @@ import mobac.program.interfaces.LayerInterface;
 import mobac.program.interfaces.MapInterface;
 import mobac.program.interfaces.MapSource;
 import mobac.program.interfaces.MapSource.LoadMethod;
+import mobac.program.interfaces.MapSourceListener;
 import mobac.program.model.AtlasOutputFormat;
 import mobac.program.model.Settings;
 import mobac.program.tilestore.TileStore;
 import mobac.utilities.GUIExceptionHandler;
-import mobac.utilities.Utilities;
 import mobac.utilities.tar.TarIndex;
 import mobac.utilities.tar.TarIndexedArchive;
 
 import org.apache.log4j.Logger;
 
 public class AtlasThread extends Thread implements DownloadJobListener, AtlasCreationController {
-
-	private static final String MSG_TILESMISSING = "Something is wrong with download of atlas tiles.\n"
-			+ "The amount of downladed tiles is not as high as it was calculated.\nTherfore tiles "
-			+ "will be missing in the created atlas.\n %d tiles are missing.\n\n"
-			+ "Are you sure you want to continue " + "and create the atlas anyway?";
-
 	private static final String MSG_DOWNLOADERRORS = "<html>Multiple tile downloads have failed. "
 			+ "Something may be wrong with your connection to the download server or your selected area. "
 			+ "<br>Do you want to:<br><br>"
@@ -74,7 +69,6 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 
 	private DownloadJobProducerThread djp = null;
 	private JobDispatcher downloadJobDispatcher;
-	private AtlasProgress ap; // The GUI showing the progress
 
 	private AtlasInterface atlas;
 	private AtlasCreator atlasCreator = null;
@@ -86,19 +80,32 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 	private int jobsPermanentError = 0;
 	private int maxDownloadRetries = 1;
 
+	
+	private ArrayList<IAtlasThreadListener> listeners = new ArrayList<IAtlasThreadListener>();
+	
 	public AtlasThread(AtlasInterface atlas) throws AtlasTestException {
 		this(atlas, atlas.getOutputFormat().createAtlasCreatorInstance());
 	}
 
 	public AtlasThread(AtlasInterface atlas, AtlasCreator atlasCreator) throws AtlasTestException {
 		super("AtlasThread " + getNextThreadNum());
-		ap = new AtlasProgress(this);
 		this.atlas = atlas;
 		this.atlasCreator = atlasCreator;
 		testAtlas();
 		TileStore.getInstance().closeAll();
 		maxDownloadRetries = Settings.getInstance().downloadRetryCount;
 		pauseResumeHandler = new PauseResumeHandler();
+	}
+	
+	public AtlasInterface getAtlas() {
+		return atlas;
+	}
+	
+	public void addAtlasThreadListener(IAtlasThreadListener listener) {
+		listeners.add(listener);
+	}
+	public void removeAtlasThreadListener(IAtlasThreadListener listener) {
+		listeners.remove(listener);
 	}
 
 	private void testAtlas() throws AtlasTestException {
@@ -126,37 +133,87 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 	public void run() {
 		GUIExceptionHandler.registerForCurrentThread();
 		log.info("Starting altas creation");
-		ap.setDownloadControlerListener(this);
 		try {
 			createAtlas();
+			fireCompleted();
 			log.info("Altas creation finished");
 		} catch (OutOfMemoryError e) {
 			System.gc();
-			SwingUtilities.invokeLater(new Runnable() {
-				public void run() {
-					String message = "Mobile Atlas Creator has run out of memory.";
-					int maxMem = Utilities.getJavaMaxHeapMB();
-					if (maxMem > 0)
-						message += "\nCurrent maximum memory associated to MOBAC: " + maxMem + " MiB";
-					JOptionPane.showMessageDialog(null, message, "Out of memory", JOptionPane.ERROR_MESSAGE);
-					ap.closeWindow();
-				}
-			});
+			fireCriticalError(e);
 			log.error("Out of memory: ", e);
 		} catch (InterruptedException e) {
-			SwingUtilities.invokeLater(new Runnable() {
-				public void run() {
-					JOptionPane.showMessageDialog(null, "Atlas download aborted", "Information",
-							JOptionPane.INFORMATION_MESSAGE);
-					ap.closeWindow();
-				}
-			});
+			fireAborted();
 			log.info("Altas creation was interrupted by user");
 		} catch (Exception e) {
+			fireAborted();
 			log.error("Altas creation aborted because of an error: ", e);
 			GUIExceptionHandler.showExceptionDialog(e);
 		}
 		System.gc();
+	}
+
+	private void fireCriticalError(Throwable t) {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().criticalError(t);
+		}
+	}
+
+	private void fireAborted() {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().downloadAborted();
+		}
+	}
+
+	private void fireCompleted() {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().atlasCreationFinished();
+		}
+	}
+
+	private void fireInit() {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().initialize(this);
+		}
+
+	}
+	
+	private void fireZoomChanged(int zoom) {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().zoomChanged(zoom);
+		}
+	}
+
+	private void fireBeginMap(MapInterface map) {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().beginMap(map);
+		}
+	}
+
+	private void fireDownloadComplete() {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			i.next().downloadJobComplete();
+		}
+	}
+
+	private void fireTilesMissing(int count, int missing) throws InterruptedException {
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		InterruptedException ie = null; 
+		while(i.hasNext()) {
+			try {
+				i.next().tilesMissing(count, missing);
+			} catch(InterruptedException ie2) {
+				ie= ie2;
+			}
+		}
+		if( ie != null )
+			throw ie;
 	}
 
 	/**
@@ -192,12 +249,11 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 			return;
 		}
 
-		ap.initAtlas(atlas);
-		ap.setVisible(true);
+		fireInit();
 
 		Settings s = Settings.getInstance();
 
-		downloadJobDispatcher = new JobDispatcher(s.downloadThreadCount, pauseResumeHandler, ap);
+		downloadJobDispatcher = new JobDispatcher(s.downloadThreadCount, pauseResumeHandler, getMapSourceListeners());
 		try {
 			for (LayerInterface layer : atlas) {
 				atlasCreator.initLayerCreation(layer);
@@ -238,9 +294,18 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 			downloadJobDispatcher.terminateAllWorkerThreads();
 			if (!atlasCreator.isAborted())
 				atlasCreator.finishAtlasCreation();
-			ap.atlasCreationFinished();
+			fireCompleted();
 		}
 
+	}
+	
+	private MapSourceListener[] getMapSourceListeners() {
+		ArrayList<MapSourceListener> list = new ArrayList<MapSourceListener>();
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		while(i.hasNext()) {
+			list.add((MapSourceListener)i.next());
+		}
+		return (MapSourceListener[]) list.toArray(new MapSourceListener[list.size()]);
 	}
 
 	/**
@@ -258,7 +323,8 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 		jobsRetryError = 0;
 		jobsPermanentError = 0;
 
-		ap.initMapDownload(map);
+		fireBeginMap(map);
+
 		if (currentThread().isInterrupted())
 			throw new InterruptedException();
 
@@ -269,11 +335,9 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 		 * In this section of code below, tiles for Atlas is being downloaded and saved in the temporary layer tar file
 		 * in the system temp directory.
 		 **/
-		int zoom = map.getZoom();
-
+		fireZoomChanged(map.getZoom());
+		
 		final int tileCount = (int) map.calculateTilesToDownload();
-
-		ap.setZoomLevel(zoom);
 		try {
 			tileArchive = null;
 			TileProvider mapTileProvider;
@@ -281,7 +345,7 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 				// For online maps we download the tiles first and then start creating the map if
 				// we are sure we got all tiles
 				if (!AtlasOutputFormat.TILESTORE.equals(atlas.getOutputFormat())) {
-					String tempSuffix = "MOBAC_" + atlas.getName() + "_" + zoom + "_";
+					String tempSuffix = "MOBAC_" + atlas.getName() + "_" + map.getZoom() + "_";
 					File tileArchiveFile = File.createTempFile(tempSuffix, ".tar", DirectoryManager.tempDir);
 					// If something goes wrong the temp file only persists until the VM exits
 					tileArchiveFile.deleteOnExit();
@@ -297,10 +361,10 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 				while (djp.isAlive() || (downloadJobDispatcher.getWaitingJobCount() > 0)
 						|| downloadJobDispatcher.isAtLeastOneWorkerActive()) {
 					Thread.sleep(500);
-					if (!failedMessageAnswered && (jobsRetryError > 50) && !ap.ignoreDownloadErrors()) {
+					if (!failedMessageAnswered && (jobsRetryError > 50) && !ignoreErrors) {
 						pauseResumeHandler.pause();
 						String[] answers = new String[] { "Continue", "Retry", "Skip", "Abort" };
-						int answer = JOptionPane.showOptionDialog(ap, MSG_DOWNLOADERRORS,
+						int answer = JOptionPane.showOptionDialog(null, MSG_DOWNLOADERRORS,
 								"Multiple download errors - how to proceed?", 0, JOptionPane.QUESTION_MESSAGE, null,
 								answers, answers[0]);
 						failedMessageAnswered = true;
@@ -329,15 +393,8 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 					tileArchive.writeEndofArchive();
 					tileArchive.close();
 					tileIndex = tileArchive.getTarIndex();
-					if (tileIndex.size() < tileCount && !ap.ignoreDownloadErrors()) {
-						int missing = tileCount - tileIndex.size();
-						log.debug("Expected tile count: " + tileCount + " downloaded tile count: " + tileIndex.size()
-								+ " missing: " + missing);
-						int answer = JOptionPane.showConfirmDialog(ap, String.format(MSG_TILESMISSING, missing),
-								"Error - tiles are missing - do you want to continue anyway?",
-								JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
-						if (answer != JOptionPane.YES_OPTION)
-							throw new InterruptedException();
+					if (tileIndex.size() < tileCount && !ignoreErrors) {
+						fireTilesMissing(tileCount, tileCount-tileIndex.size());
 					}
 				}
 				downloadJobDispatcher.cancelOutstandingJobs();
@@ -406,11 +463,10 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 
 	public void jobFinishedSuccessfully(int bytesDownloaded) {
 		synchronized (this) {
-			ap.incMapDownloadProgress();
 			activeDownloads--;
 			jobsCompleted++;
+			fireDownloadComplete();
 		}
-		ap.updateGUI();
 	}
 
 	public void jobFinishedWithError(boolean retry) {
@@ -420,21 +476,36 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 				jobsRetryError++;
 			else {
 				jobsPermanentError++;
-				ap.incMapDownloadProgress();
+				fireDownloadComplete();
 			}
 		}
-		if (!ap.ignoreDownloadErrors())
+		if (!ignoreErrors)
 			Toolkit.getDefaultToolkit().beep();
-		ap.setErrorCounter(jobsRetryError, jobsPermanentError);
-		ap.updateGUI();
 	}
 
+	public int getJobsRetryErrorCount() {
+		return jobsRetryError;
+	}
+	public int getJobsPermanentErrorCount() {
+		return jobsPermanentError;
+	}
+	
 	public int getMaxDownloadRetries() {
 		return maxDownloadRetries;
 	}
 
+	/* This really violates the whole point of the interface, 
+	 * but i'm not in teh mood to change all of the atlas creators 
+	 */
 	public AtlasProgress getAtlasProgress() {
-		return ap;
+		Iterator<IAtlasThreadListener> i = listeners.iterator();
+		IAtlasThreadListener l;
+		while(i.hasNext()) {
+			l = i.next();
+			if( l instanceof AtlasProgress )
+				return ((AtlasProgress)l);
+		}
+		return null;
 	}
 
 	public File getCustomAtlasDir() {
@@ -444,5 +515,9 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 	public void setCustomAtlasDir(File customAtlasDir) {
 		this.customAtlasDir = customAtlasDir;
 	}
-
+	
+	private boolean ignoreErrors = Settings.getInstance().ignoreDlErrors;
+	public void setIgnoreErrors(boolean b) {
+		this.ignoreErrors = b;
+	}
 }

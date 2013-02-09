@@ -18,6 +18,7 @@ package mobac.program.commandline;
 
 import javax.xml.bind.JAXBException;
 
+import mobac.gui.AtlasProgress;
 import mobac.program.AtlasThread;
 import mobac.program.interfaces.AtlasInterface;
 import mobac.program.interfaces.CommandLineAction;
@@ -50,7 +51,10 @@ public class CreateAtlas implements CommandLineAction {
 				e.printStackTrace();
 				System.exit(1);
 			}
-			new AtlasThread(atlas).start();
+			AtlasThread at = new AtlasThread(atlas);
+			AtlasProgress ap = new AtlasProgress(at);
+			at.addAtlasThreadListener(ap);
+			at.start();
 		} catch (Exception e) {
 			GUIExceptionHandler.processException(e);
 		}

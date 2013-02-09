@@ -35,6 +35,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
@@ -42,6 +43,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 
 import mobac.program.AtlasThread;
+import mobac.program.IAtlasThreadListener;
 import mobac.program.Logging;
 import mobac.program.interfaces.AtlasInterface;
 import mobac.program.interfaces.LayerInterface;
@@ -60,8 +62,15 @@ import org.apache.log4j.Logger;
  * A window showing the progress while {@link AtlasThread} downloads and processes the map tiles.
  * 
  */
-public class AtlasProgress extends JFrame implements ActionListener, MapSourceListener {
+public class AtlasProgress extends JFrame implements ActionListener, MapSourceListener, IAtlasThreadListener {
 
+	private static final String MSG_TILESMISSING = "Something is wrong with download of atlas tiles.\n"
+			+ "The amount of downladed tiles is not as high as it was calculated.\nTherfore tiles "
+			+ "will be missing in the created atlas.\n %d tiles are missing.\n\n"
+			+ "Are you sure you want to continue " + "and create the atlas anyway?";
+
+
+	
 	private static Logger log = Logger.getLogger(AtlasProgress.class);
 
 	private static final long serialVersionUID = -1L;
@@ -237,6 +246,10 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 
 		ignoreDlErrors = new JCheckBox("Ignore download errors and continue automatically",
 				Settings.getInstance().ignoreDlErrors);
+		ignoreDlErrors.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				atlasThread.setIgnoreErrors(ignoreDlErrors.isSelected());
+			} });
 		statusLabel = new JLabel("Status:");
 		Font f = statusLabel.getFont();
 		statusLabel.setFont(f.deriveFont(Font.BOLD));
@@ -733,5 +746,63 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 		AtlasProgress ap = new AtlasProgress(null);
 		ap.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		ap.setVisible(true);
+	}
+
+	@Override
+	public void criticalError(Throwable t) {
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				String message = "Mobile Atlas Creator has run out of memory.";
+				int maxMem = Utilities.getJavaMaxHeapMB();
+				if (maxMem > 0)
+					message += "\nCurrent maximum memory associated to MOBAC: " + maxMem + " MiB";
+				JOptionPane.showMessageDialog(null, message, "Out of memory", JOptionPane.ERROR_MESSAGE);
+				closeWindow();
+			}
+		});
+	}
+
+	@Override
+	public void downloadAborted() {
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				JOptionPane.showMessageDialog(null, "Atlas download aborted", "Information",
+						JOptionPane.INFORMATION_MESSAGE);
+				closeWindow();
+			}
+		});
+	}
+
+	@Override
+	public void initialize(AtlasThread thread) {
+		initAtlas(atlasThread.getAtlas());
+		setVisible(true);
+	}
+
+	@Override
+	public void beginMap(MapInterface map) {
+		initMapDownload(map);
+		updateGUI();
+	}
+
+	@Override
+	public void zoomChanged(int zoom) {
+		setZoomLevel(zoom);
+	}
+
+	@Override
+	public void downloadJobComplete() {
+		setErrorCounter(atlasThread.getJobsRetryErrorCount(), atlasThread.getJobsPermanentErrorCount());
+	}
+
+	@Override
+	public void tilesMissing(int tileCount, int missing) throws InterruptedException {
+		log.debug("Expected tile count: " + tileCount + " downloaded tile count: " + (tileCount-missing)
+				+ " missing: " + missing);
+		int answer = JOptionPane.showConfirmDialog(this, String.format(MSG_TILESMISSING, missing),
+				"Error - tiles are missing - do you want to continue anyway?",
+				JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE);
+		if (answer != JOptionPane.YES_OPTION)
+			throw new InterruptedException();
 	}
 }

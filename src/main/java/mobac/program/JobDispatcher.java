@@ -41,18 +41,22 @@ public class JobDispatcher {
 
 	protected PauseResumeHandler pauseResumeHandler;
 
-	protected MapSourceListener mapSourceListener;
+	protected MapSourceListener[] mapSourceListener;
 
 	protected BlockingQueue<Job> jobQueue = new LinkedBlockingQueue<Job>();
 
 	public JobDispatcher(int threadCount, PauseResumeHandler pauseResumeHandler, MapSourceListener mapSourceListener) {
+		this(threadCount, pauseResumeHandler, new MapSourceListener[]{mapSourceListener});
+	}
+
+	public JobDispatcher(int threadCount, PauseResumeHandler pauseResumeHandler, MapSourceListener[] mapSourceListener) {
 		this.pauseResumeHandler = pauseResumeHandler;
 		this.mapSourceListener = mapSourceListener;
 		workers = new WorkerThread[threadCount];
 		for (int i = 0; i < threadCount; i++)
 			workers[i] = new WorkerThread(i);
 	}
-
+	
 	@Override
 	protected void finalize() throws Throwable {
 		terminateAllWorkerThreads();
@@ -192,11 +196,13 @@ public class JobDispatcher {
 		}
 
 		public void tileDownloaded(int size) {
-			mapSourceListener.tileDownloaded(size);
+			for( int i = 0; i < size; i++ )
+				mapSourceListener[i].tileDownloaded(size);
 		}
 
 		public void tileLoadedFromCache(int size) {
-			mapSourceListener.tileLoadedFromCache(size);
+			for( int i = 0; i < size; i++ )
+				mapSourceListener[i].tileLoadedFromCache(size);
 		}
 
 	}

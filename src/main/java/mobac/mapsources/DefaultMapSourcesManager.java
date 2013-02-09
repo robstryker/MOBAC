@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
 
@@ -38,6 +39,7 @@ import mobac.mapsources.loader.EclipseMapPackLoader;
 import mobac.mapsources.loader.MapPackManager;
 import mobac.program.interfaces.MapSource;
 import mobac.program.model.Settings;
+import mobac.utilities.SystemPropertyUtils;
 
 import org.apache.log4j.Logger;
 
@@ -218,16 +220,27 @@ public class DefaultMapSourcesManager extends MapSourcesManager {
 
 	@Override
 	public MapSource getDefaultMapSource() {
-		MapSource ms = getSourceByName("MapQuest");// DEFAULT;
+		/* First check a system property for default map source */
+		String prop = System.getProperty(SystemPropertyUtils.MAP_SOURCE);
+		MapSource ms = null;
+		if( prop != null && prop.length() > 0 ) {
+			ms = getSourceByName(prop);
+			Set<String> s = allAvailableMapSources.keySet();
+			System.out.println(s.toString());
+		}
+		if( ms == null )
+			ms = getSourceByName("MapQuest");// DEFAULT;
+		
 		if (ms != null)
 			return ms;
+		
 		// Fallback: return first
 		return allMapSources.values().iterator().next();
 	}
 
 	@Override
 	public MapSource getSourceByName(String name) {
-		return allAvailableMapSources.get(name);
+		return name == null ? null : allAvailableMapSources.get(name);
 	}
 
 }

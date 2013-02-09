@@ -25,6 +25,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 
+import mobac.gui.MainGUI;
 import mobac.gui.mapview.controller.DefaultMapController;
 import mobac.gui.mapview.controller.JMapController;
 import mobac.gui.mapview.controller.MapKeyboardController;
@@ -40,6 +41,7 @@ import mobac.program.model.MapSelection;
 import mobac.program.model.MercatorPixelCoordinate;
 import mobac.program.model.Settings;
 import mobac.utilities.MyMath;
+import mobac.utilities.SystemPropertyUtils;
 
 import org.apache.log4j.Logger;
 
@@ -116,17 +118,84 @@ public class PreviewMap extends JMapViewer {
 	}
 
 	/**
-	 * Sets the current view by the current values from {@link Settings}
+	 * Sets the current view by the current values from {@link Settings},
+	 * or, from command line overrides and system properties
 	 */
 	public void settingsLoad() {
+		// If cmd line args exist to override this, use those args instead of the settings. 
 		Settings settings = Settings.getInstance();
-		MapSource mapSource = MapSourcesManager.getInstance().getSourceByName(settings.mapviewMapSource);
+		
+		// Handle map source
+		MapSource mapSource = MapSourcesManager.getInstance().getSourceByName(System.getProperty(SystemPropertyUtils.MAP_SOURCE));
+		if( mapSource == null )
+			mapSource = MapSourcesManager.getInstance().getSourceByName(settings.mapviewMapSource);
 		if (mapSource != null)
 			setMapSource(mapSource);
-		EastNorthCoordinate c = settings.mapviewCenterCoordinate;
-		gridZoom = settings.mapviewGridZoom;
-		setDisplayPositionByLatLon(c, settings.mapviewZoom);
-		setSelectionByTileCoordinate(MAX_ZOOM, settings.mapviewSelectionMin, settings.mapviewSelectionMax, true);
+		
+		// Handle zoom
+		String gridZoomOverride = System.getProperty(SystemPropertyUtils.MAP_GRID_ZOOM);
+		int gZoom = -1;
+		if( gridZoomOverride != null && gridZoomOverride.length() > 0) {
+			try {
+				gZoom = Integer.parseInt(gridZoomOverride);
+			} catch(NumberFormatException nfe) {}
+		}
+		gridZoom = gZoom == -1 ? settings.mapviewGridZoom : gZoom;
+		
+		String zoomOverride = System.getProperty(SystemPropertyUtils.MAP_ZOOM);
+		int zoom = -1;
+		if( zoomOverride != null && zoomOverride.length() > 0) {
+			try {
+				zoom = Integer.parseInt(zoomOverride);
+			} catch(NumberFormatException nfe) {}
+		}
+		zoom = zoom == -1 ? settings.mapviewZoom : zoom;
+
+		EastNorthCoordinate c = createCoordinates(System.getProperty(SystemPropertyUtils.MAP_INITIAL_POSITION));
+		if( c == null )
+			c = settings.mapviewCenterCoordinate;
+		setDisplayPositionByLatLon(c, zoom);
+		
+		// Initial selection
+		MapSelection sel = createInitialMapSelection(System.getProperty(SystemPropertyUtils.MAP_INITIAL_SELECTION));
+		if( sel != null )
+			setSelectionByMapSelection(sel, true);
+		else
+			setSelectionByTileCoordinate(MAX_ZOOM, settings.mapviewSelectionMin, settings.mapviewSelectionMax, true);
+	}
+	
+	private MapSelection createInitialMapSelection(String sysprop) {
+		if( sysprop == null)
+			return null;
+		String[] split = sysprop.split(",");
+		try {
+			Double d1 = Double.parseDouble(split[0]);
+			Double d2 = Double.parseDouble(split[1]);
+			EastNorthCoordinate min = new EastNorthCoordinate(d1.doubleValue(), d2.doubleValue());//34,104;
+			Double d3 = Double.parseDouble(split[2]);
+			Double d4 = Double.parseDouble(split[3]);
+			EastNorthCoordinate max = new EastNorthCoordinate(d3.doubleValue(), d4.doubleValue());//34,104;
+			MapSelection ms = new MapSelection(MainGUI.getMainGUI().previewMap.getMapSource(), min, max);
+			return ms;
+		} catch(NumberFormatException nfe) {
+			return null;
+		}
+		
+	}
+	
+	private EastNorthCoordinate createCoordinates(String initial) {
+		if( initial == null )
+			return null;
+		String[] split = initial.split(",");
+		if( split.length > 2 )
+			return null;
+		try {
+			Double d1 = Double.parseDouble(split[0]);
+			Double d2 = Double.parseDouble(split[1]);
+			return new EastNorthCoordinate(d1.doubleValue(), d2.doubleValue());//34,104;
+		} catch(NumberFormatException nfe) {
+			return null;
+		}
 	}
 
 	@Override
@@ -324,17 +393,30 @@ public class PreviewMap extends JMapViewer {
 	 * @param notifyListeners
 	 */
 	public void setSelectionAndZoomTo(MapSelection ms, boolean notifyListeners) {
-		if (!ms.isAreaSelected())
+		setSelectionAndZoomTo(ms, false, notifyListeners);
+	}
+	
+	/**
+	 * Zooms to the specified {@link MapSelection} and sets the selection to it;
+	 * Allows an additional flag to force the behavior
+	 * 
+	 * @param ms
+	 * @param abortIfUnselected
+	 * @param notifyListeners
+	 */
+	public void setSelectionAndZoomTo(MapSelection ms, boolean force, boolean notifyListeners) {
+		if (!force && !ms.isAreaSelected())
 			return;
 		log.trace("Setting selection to: " + ms);
-		Point max = ms.getBottomRightPixelCoordinate(MAX_ZOOM);
-		Point min = ms.getTopLeftPixelCoordinate(MAX_ZOOM);
-		setDisplayToFitPixelCoordinates(max.x, max.y, min.x, min.y);
+		setDisplayToFitMapSelection(ms);
+		setSelectionByMapSelection(ms, notifyListeners);
+	}
+
+	public void setSelectionByMapSelection(MapSelection ms, boolean notifyListeners) {
 		Point pStart = ms.getTopLeftPixelCoordinate(zoom);
 		Point pEnd = ms.getBottomRightPixelCoordinate(zoom);
 		setSelectionByTileCoordinate(pStart, pEnd, notifyListeners);
 	}
-
 	/**
 	 * 
 	 * @param pStart
