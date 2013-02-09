@@ -196,12 +196,12 @@ public class JobDispatcher {
 		}
 
 		public void tileDownloaded(int size) {
-			for( int i = 0; i < size; i++ )
+			for( int i = 0; i < mapSourceListener.length; i++ )
 				mapSourceListener[i].tileDownloaded(size);
 		}
 
 		public void tileLoadedFromCache(int size) {
-			for( int i = 0; i < size; i++ )
+			for( int i = 0; i < mapSourceListener.length; i++ )
 				mapSourceListener[i].tileLoadedFromCache(size);
 		}
 

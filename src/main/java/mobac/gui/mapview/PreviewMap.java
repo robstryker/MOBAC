@@ -172,9 +172,12 @@ public class PreviewMap extends JMapViewer {
 			Double d1 = Double.parseDouble(split[0]);
 			Double d2 = Double.parseDouble(split[1]);
 			EastNorthCoordinate min = new EastNorthCoordinate(d1.doubleValue(), d2.doubleValue());//34,104;
-			Double d3 = Double.parseDouble(split[2]);
-			Double d4 = Double.parseDouble(split[3]);
-			EastNorthCoordinate max = new EastNorthCoordinate(d3.doubleValue(), d4.doubleValue());//34,104;
+			EastNorthCoordinate max = min;
+			if( split.length == 4 ) {
+				Double d3 = Double.parseDouble(split[2]);
+				Double d4 = Double.parseDouble(split[3]);
+				max = new EastNorthCoordinate(d3.doubleValue(), d4.doubleValue());//34,104;
+			}
 			MapSelection ms = new MapSelection(MainGUI.getMainGUI().previewMap.getMapSource(), min, max);
 			return ms;
 		} catch(NumberFormatException nfe) {
