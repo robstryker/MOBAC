@@ -40,6 +40,7 @@ import mobac.program.model.EastNorthCoordinate;
 import mobac.program.model.MapSelection;
 import mobac.program.model.MercatorPixelCoordinate;
 import mobac.program.model.Settings;
+import mobac.utilities.GridSelectionUtility;
 import mobac.utilities.MyMath;
 import mobac.utilities.SystemPropertyUtils;
 
@@ -442,34 +443,17 @@ public class PreviewMap extends JMapViewer {
 	 * @param notifyListeners
 	 */
 	public void setSelectionByTileCoordinate(int cZoom, Point pStart, Point pEnd, boolean notifyListeners) {
+		gridSelectionStart = null;
+		gridSelectionEnd = null;
 		if (pStart == null || pEnd == null) {
 			iSelectionMin = null;
 			iSelectionMax = null;
-			gridSelectionStart = null;
-			gridSelectionEnd = null;
 			return;
 		}
 
-		Point pNewStart = new Point();
-		Point pNewEnd = new Point();
-		int mapMaxCoordinate = mapSource.getMapSpace().getMaxPixels(cZoom) - 1;
-		// Sort x/y coordinate of points so that pNewStart < pnewEnd and limit selection to map size
-		pNewStart.x = Math.max(0, Math.min(mapMaxCoordinate, Math.min(pStart.x, pEnd.x)));
-		pNewStart.y = Math.max(0, Math.min(mapMaxCoordinate, Math.min(pStart.y, pEnd.y)));
-		pNewEnd.x = Math.max(0, Math.min(mapMaxCoordinate, Math.max(pStart.x, pEnd.x)));
-		pNewEnd.y = Math.max(0, Math.min(mapMaxCoordinate, Math.max(pStart.y, pEnd.y)));
-
-		int zoomDiff = MAX_ZOOM - cZoom;
-
-		pNewEnd.x <<= zoomDiff;
-		pNewEnd.y <<= zoomDiff;
-		pNewStart.x <<= zoomDiff;
-		pNewStart.y <<= zoomDiff;
-
-		iSelectionMin = pNewStart;
-		iSelectionMax = pNewEnd;
-		gridSelectionStart = null;
-		gridSelectionEnd = null;
+		Point[] cleaned = GridSelectionUtility.cleanPointsForSelection(mapSource, cZoom, pStart, pEnd);
+		iSelectionMin = cleaned[0];
+		iSelectionMax = cleaned[1];
 
 		updateGridValues();
 		applyGridOnSelection();
@@ -480,30 +464,12 @@ public class PreviewMap extends JMapViewer {
 	}
 
 	protected void applyGridOnSelection() {
-		if (gridZoom < 0) {
-			gridSelectionStart = iSelectionMin;
-			gridSelectionEnd = iSelectionMax;
+		Point[] results = GridSelectionUtility.getSelectionAsGridSelection(mapSource, iSelectionMin, iSelectionMax, gridZoom);
+		if( results == null )
 			return;
-		}
-
-		if (iSelectionMin == null || iSelectionMax == null)
-			return;
-
-		int gridZoomDiff = MAX_ZOOM - gridZoom;
-		int gridFactor = mapSource.getMapSpace().getTileSize() << gridZoomDiff;
-
-		Point pNewStart = new Point(iSelectionMin);
-		Point pNewEnd = new Point(iSelectionMax);
-
-		// Snap to the current grid
-
-		pNewStart.x = MyMath.roundDownToNearest(pNewStart.x, gridFactor);
-		pNewStart.y = MyMath.roundDownToNearest(pNewStart.y, gridFactor);
-		pNewEnd.x = MyMath.roundUpToNearest(pNewEnd.x, gridFactor) - 1;
-		pNewEnd.y = MyMath.roundUpToNearest(pNewEnd.y, gridFactor) - 1;
-
-		gridSelectionStart = pNewStart;
-		gridSelectionEnd = pNewEnd;
+		
+		gridSelectionStart = results[0];
+		gridSelectionEnd = results[1];
 	}
 
 	/**
@@ -511,29 +477,16 @@ public class PreviewMap extends JMapViewer {
 	 * {@link MapEventListener#selectionChanged(MercatorPixelCoordinate, MercatorPixelCoordinate)} event.
 	 */
 	public void updateMapSelection() {
-		int x_min, y_min, x_max, y_max;
-
+		MercatorPixelCoordinate[] coords;
 		if (gridZoom >= 0) {
-			if (gridSelectionStart == null || gridSelectionEnd == null)
-				return;
-			x_min = gridSelectionStart.x;
-			y_min = gridSelectionStart.y;
-			x_max = gridSelectionEnd.x;
-			y_max = gridSelectionEnd.y;
+			coords = GridSelectionUtility.asPixelCoordinates(mapSource, gridSelectionStart, gridSelectionEnd);
 		} else {
-			if (iSelectionMin == null || iSelectionMax == null)
-				return;
-			x_min = iSelectionMin.x;
-			y_min = iSelectionMin.y;
-			x_max = iSelectionMax.x;
-			y_max = iSelectionMax.y;
+			coords = GridSelectionUtility.asPixelCoordinates(mapSource, iSelectionMin, iSelectionMax);
 		}
-		MercatorPixelCoordinate min = new MercatorPixelCoordinate(mapSource.getMapSpace(), x_min, y_min, MAX_ZOOM);
-		MercatorPixelCoordinate max = new MercatorPixelCoordinate(mapSource.getMapSpace(), x_max, y_max, MAX_ZOOM);
 		// log.debug("sel min: [" + min + "]");
 		// log.debug("sel max: [" + max + "]");
 		for (MapEventListener listener : mapEventListeners)
-			listener.selectionChanged(max, min);
+			listener.selectionChanged(coords[1], coords[0]);
 	}
 
 	public void addMapEventListener(MapEventListener l) {
