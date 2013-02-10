@@ -1,0 +1,6 @@
+This is a package where I would want to rewrite the atlas creation 
+logic, specifically AtlasThread and AtlasProgress, however, doing so
+would require changes to any jars such as google maps, which
+have been compiled against the previous API. 
+
+So this will have to be handled carefully. 

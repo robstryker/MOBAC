@@ -18,9 +18,9 @@ package mobac.program.download;
 
 import java.util.Enumeration;
 
-import mobac.program.AtlasThread;
 import mobac.program.JobDispatcher;
 import mobac.program.JobDispatcher.Job;
+import mobac.program.interfaces.DownloadJobListener;
 import mobac.program.interfaces.DownloadableElement;
 import mobac.utilities.tar.TarIndexedArchive;
 
@@ -39,10 +39,11 @@ public class DownloadJobProducerThread extends Thread {
 
 	final Enumeration<Job> jobEnumerator;
 
-	public DownloadJobProducerThread(AtlasThread atlasThread, JobDispatcher downloadJobDispatcher,
+	public DownloadJobProducerThread(DownloadJobListener downloadListener, 
+			JobDispatcher downloadJobDispatcher,
 			TarIndexedArchive tileArchive, DownloadableElement de) {
 		this.downloadJobDispatcher = downloadJobDispatcher;
-		jobEnumerator = de.getDownloadJobs(tileArchive, atlasThread);
+		jobEnumerator = de.getDownloadJobs(tileArchive, downloadListener);
 		start();
 	}
 
