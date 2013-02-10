@@ -390,12 +390,6 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 		updateGUI();
 	}
 
-	public void setErrorCounter(int retryErrors, int permanentErrors) {
-		data.mapRetryErrors = retryErrors;
-		data.mapPermanentErrors = permanentErrors;
-		updateGUI();
-	}
-
 	public void incMapDownloadProgress() {
 		data.mapDownloadProgress++;
 		data.totalProgress++;
@@ -792,7 +786,8 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	@Override
 	public void downloadJobComplete() {
 		incMapDownloadProgress();
-		setErrorCounter(atlasThread.getJobsRetryErrorCount(), atlasThread.getJobsPermanentErrorCount());
+		data.mapRetryErrors = atlasThread.getJobsRetryErrorCount();
+		data.mapPermanentErrors = atlasThread.getJobsPermanentErrorCount();
 		updateGUI();
 	}
 

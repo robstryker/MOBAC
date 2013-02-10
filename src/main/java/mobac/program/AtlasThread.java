@@ -26,6 +26,7 @@ import java.util.Iterator;
 
 import javax.swing.JOptionPane;
 
+import mobac.atlascreation.IAtlasThread;
 import mobac.exceptions.AtlasTestException;
 import mobac.exceptions.MapDownloadSkippedException;
 import mobac.gui.AtlasProgress;
@@ -53,7 +54,7 @@ import mobac.utilities.tar.TarIndexedArchive;
 
 import org.apache.log4j.Logger;
 
-public class AtlasThread extends Thread implements DownloadJobListener, AtlasCreationController {
+public class AtlasThread extends Thread implements DownloadJobListener, AtlasCreationController, IAtlasThread {
 	private static final String MSG_DOWNLOADERRORS = "<html>Multiple tile downloads have failed. "
 			+ "Something may be wrong with your connection to the download server or your selected area. "
 			+ "<br>Do you want to:<br><br>"
@@ -80,6 +81,7 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 	private int jobsPermanentError = 0;
 	private int maxDownloadRetries = 1;
 
+	private boolean ignoreErrors = Settings.getInstance().ignoreDlErrors;
 	
 	private ArrayList<IAtlasThreadListener> listeners = new ArrayList<IAtlasThreadListener>();
 	
@@ -516,7 +518,6 @@ public class AtlasThread extends Thread implements DownloadJobListener, AtlasCre
 		this.customAtlasDir = customAtlasDir;
 	}
 	
-	private boolean ignoreErrors = Settings.getInstance().ignoreDlErrors;
 	public void setIgnoreErrors(boolean b) {
 		this.ignoreErrors = b;
 	}
