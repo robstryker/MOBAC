@@ -37,11 +37,17 @@ import mobac.program.model.TileImageParameters;
 public class AddRectangleMapAutocut implements ActionListener {
 
 	public void actionPerformed(ActionEvent event) {
+		addSelectionWithNewLayer(null, event);
+	}
+	
+	public void addSelectionWithNewLayer(String suggestedLayerName, ActionEvent event) {
+		if( suggestedLayerName == null )
+			suggestedLayerName = MainGUI.getMainGUI().getName();
+		
 		MainGUI mg = MainGUI.getMainGUI();
 		JAtlasTree jAtlasTree = mg.jAtlasTree;
 		final String mapNameFmt = "%s %02d";
 		AtlasInterface atlasInterface = jAtlasTree.getAtlas();
-		String name = mg.getUserText();
 		MapSource mapSource = mg.getSelectedMapSource();
 		SelectedZoomLevels sZL = mg.getSelectedZoomLevels();
 		MapSelection ms = mg.getMapSelectionCoordinates();
@@ -62,7 +68,7 @@ public class AddRectangleMapAutocut implements ActionListener {
 			return;
 		}
 
-		String layerName = name;
+		String layerName = suggestedLayerName;
 		Layer layer = null;
 		int c = 1;
 		boolean success = false;
@@ -71,7 +77,7 @@ public class AddRectangleMapAutocut implements ActionListener {
 				layer = new Layer(atlasInterface, layerName);
 				success = true;
 			} catch (InvalidNameException e) {
-				layerName = name + "_" + Integer.toString(c++);
+				layerName = suggestedLayerName + "_" + Integer.toString(c++);
 			}
 		} while (!success);
 		for (int zoom : zoomLevels) {

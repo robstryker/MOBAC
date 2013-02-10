@@ -47,6 +47,7 @@ import mobac.gui.mapview.layer.DefaultMapTileLayer;
 import mobac.gui.mapview.layer.MapGridLayer;
 import mobac.program.interfaces.MapSource;
 import mobac.program.interfaces.MapSpace;
+import mobac.program.model.MapSelection;
 import mobac.utilities.Utilities;
 
 import org.apache.log4j.Logger;
@@ -257,6 +258,12 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
 		setDisplayPosition(x, y, newZoom);
 	}
 
+	public void setDisplayToFitMapSelection(MapSelection ms) {
+		Point max = ms.getBottomRightPixelCoordinate(MAX_ZOOM);
+		Point min = ms.getTopLeftPixelCoordinate(MAX_ZOOM);
+		setDisplayToFitPixelCoordinates(max.x, max.y, min.x, min.y);
+	}
+	
 	public Point2D.Double getPosition() {
 		MapSpace mapSpace = mapSource.getMapSpace();
 		double lon = mapSpace.cXToLon(center.x, zoom);

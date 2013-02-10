@@ -125,6 +125,7 @@ import mobac.program.model.SettingsWgsGrid;
 import mobac.program.model.TileImageParameters;
 import mobac.utilities.GBC;
 import mobac.utilities.GUIExceptionHandler;
+import mobac.utilities.SystemPropertyUtils;
 import mobac.utilities.Utilities;
 
 import org.apache.log4j.Level;
@@ -191,11 +192,15 @@ public class MainGUI extends JFrame implements MapEventListener {
 	private MercatorPixelCoordinate mapSelectionMax = null;
 	private MercatorPixelCoordinate mapSelectionMin = null;
 
+	private static boolean loading = false;
 	public static void createMainGui() {
-		if (mainGUI != null)
+		if (mainGUI != null || loading)
 			return;
-		mainGUI = new MainGUI();
-		mainGUI.setVisible(true);
+		loading = true;
+		MainGUI mg = new MainGUI();
+		mainGUI = mg;
+		mg.setVisible(true);
+		loading = false;
 		log.trace("MainGUI now visible");
 	}
 
@@ -239,6 +244,7 @@ public class MainGUI extends JFrame implements MapEventListener {
 
 		menuBar = new JMenuBar();
 		prepareMenuBar();
+		
 		setJMenuBar(menuBar);
 
 		loadSettings();
@@ -647,21 +653,43 @@ public class MainGUI extends JFrame implements MapEventListener {
 	}
 
 	private void loadSettings() {
-		if (Profile.DEFAULT.exists())
-			jAtlasTree.load(Profile.DEFAULT);
-		else
+		String force = System.getProperty(SystemPropertyUtils.FORCE_NEW_ATLAS_SYSPROP);
+		if( Boolean.parseBoolean(force) || !Profile.DEFAULT.exists())
 			new AtlasNew().actionPerformed(null);
+		else
+			jAtlasTree.load(Profile.DEFAULT);
 
 		Settings settings = Settings.getInstance();
 		atlasNameTextField.setText(settings.elementName);
 		previewMap.settingsLoad();
+		
+		// There is no backing model for the selected zoom levels?!
+		// The only way to modify this is through UI? No API level support.
+		// Damnit.
+		
+		List<Integer> zoomList = null;
+		if( System.getProperty(SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST) != null ) {
+			String v = System.getProperty(SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
+			String[] selected = v.split(",");
+			try {
+				ArrayList<Integer> zoomList2 = new ArrayList<Integer>();
+				for( int i = 0; i < selected.length; i++ ) {
+					zoomList2.add(Integer.parseInt(selected[i]));
+				}
+				zoomList = zoomList2;
+			} catch(NumberFormatException nfe) {
+			}
+		}
 		int nextZoom = 0;
-		List<Integer> zoomList = settings.selectedZoomLevels;
+		if( zoomList == null )
+			zoomList = settings.selectedZoomLevels;
 		if (zoomList != null) {
 			for (JZoomCheckBox currentZoomCb : cbZoom) {
 				for (int i = nextZoom; i < zoomList.size(); i++) {
 					int currentListZoom = zoomList.get(i);
+					System.out.println("i=" + i + ", current cb zoom level: " + currentZoomCb.getZoomLevel() + ", nextZoom=" + nextZoom + ", currentListZoom=" + currentListZoom);
 					if (currentZoomCb.getZoomLevel() == currentListZoom) {
+						System.out.println( "   selected");
 						currentZoomCb.setSelected(true);
 						nextZoom = 1;
 						break;
@@ -704,6 +732,12 @@ public class MainGUI extends JFrame implements MapEventListener {
 		updateBookmarksMenu();
 	}
 
+	public void setZoomLevelSelection(int level, boolean value) {
+		if( level >= 0 && level < cbZoom.length ) {
+			cbZoom[level].setSelected(value);
+		}
+	}
+	
 	private void saveSettings() {
 		try {
 			jAtlasTree.save(Profile.DEFAULT);
