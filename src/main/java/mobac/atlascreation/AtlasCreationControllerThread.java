@@ -53,7 +53,7 @@ import mobac.utilities.tar.TarIndexedArchive;
 
 import org.apache.log4j.Logger;
 
-public class AtlasCreationControllerThread extends Thread implements DownloadJobListener, AtlasCreationController, IAtlasThread {
+public class AtlasCreationControllerThread extends Thread implements DownloadJobListener, AtlasCreationController, IAtlasThread, IAtlasCreationController {
 	private static final String MSG_DOWNLOADERRORS = "<html>Multiple tile downloads have failed. "
 			+ "Something may be wrong with your connection to the download server or your selected area. "
 			+ "<br>Do you want to:<br><br>"
@@ -186,6 +186,7 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		}
 
 		monitor.initAtlas(atlas);
+		ui.begin(atlas);
 
 		Settings s = Settings.getInstance();
 
@@ -231,6 +232,7 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 			if (!atlasCreator.isAborted())
 				atlasCreator.finishAtlasCreation();
 			monitor.atlasCreationFinished();
+			ui.finished();
 		}
 
 	}
@@ -295,6 +297,8 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 					Thread.sleep(500);
 					if (!failedMessageAnswered && (jobsRetryError > 50) && !ignoreErrors) {
 						pauseResumeHandler.pause();
+						
+						// TODO move this to the UI ***
 						String[] answers = new String[] { "Continue", "Retry", "Skip", "Abort" };
 						int answer = JOptionPane.showOptionDialog(null, MSG_DOWNLOADERRORS,
 								"Multiple download errors - how to proceed?", 0, JOptionPane.QUESTION_MESSAGE, null,
@@ -385,10 +389,6 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		}
 	}
 
-	public int getActiveDownloads() {
-		return activeDownloads;
-	}
-
 	public synchronized void jobStarted() {
 		activeDownloads++;
 	}
@@ -426,18 +426,12 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		return maxDownloadRetries;
 	}
 
-	/* This really violates the whole point of the interface, 
-	 * but i'm not in teh mood to change all of the atlas creators 
+	/* 
+	 * This is a migration task to prevent having to rewrite
+	 * all other output formats
 	 */
 	public AtlasProgress getAtlasProgress() {
-//		Iterator<IAtlasThreadListener> i = listeners.iterator();
-//		IAtlasThreadListener l;
-//		while(i.hasNext()) {
-//			l = i.next();
-//			if( l instanceof AtlasProgress )
-//				return ((AtlasProgress)l);
-//		}
-		return null;
+		return new AtlasProgress(this.monitor);
 	}
 
 	public File getCustomAtlasDir() {
@@ -450,5 +444,10 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 	
 	public void setIgnoreErrors(boolean b) {
 		this.ignoreErrors = b;
+	}
+
+	@Override
+	public int countActiveDownloads() {
+		return activeDownloads;
 	}
 }

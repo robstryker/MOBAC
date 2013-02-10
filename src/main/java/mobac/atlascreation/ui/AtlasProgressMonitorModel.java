@@ -28,7 +28,7 @@ public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
 	boolean finished = false;
 
 	public void initAtlas(AtlasInterface atlasInterface) {
-		atlasInterface = atlasInterface;
+		atlas = atlasInterface;
 		if (atlasInterface.getOutputFormat().equals(AtlasOutputFormat.TILESTORE))
 			totalNumberOfTiles = (int) atlasInterface.calculateTilesToDownload();
 		else
@@ -85,6 +85,9 @@ public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
 
 	public void setMapCreationProgress(int progress) {
 		mapCreationProgress = progress;
+		totalProgress = mapInfo.tileCountOnStart + mapInfo.mapTiles
+				+ (int) (((long) mapInfo.mapTiles) * mapCreationProgress / mapCreationMax);
+		totalProgressTenthPercent = (int) (totalProgress * 1000d / (double) totalNumberOfTiles);
 	}
 
 	public void tileDownloaded(int size) {

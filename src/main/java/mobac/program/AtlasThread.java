@@ -25,6 +25,7 @@ import java.text.NumberFormat;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import mobac.atlascreation.IAtlasThread;
 import mobac.exceptions.AtlasTestException;
 import mobac.exceptions.MapDownloadSkippedException;
 import mobac.gui.AtlasProgress;
@@ -52,7 +53,7 @@ import mobac.utilities.tar.TarIndexedArchive;
 
 import org.apache.log4j.Logger;
 
-public class AtlasThread extends Thread implements DownloadJobListener, AtlasCreationController {
+public class AtlasThread extends Thread implements DownloadJobListener, AtlasCreationController, IAtlasThread {
 
 	private static final String MSG_TILESMISSING = "Something is wrong with download of atlas tiles.\n"
 			+ "The amount of downladed tiles is not as high as it was calculated.\nTherfore tiles "

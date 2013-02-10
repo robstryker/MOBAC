@@ -133,6 +133,24 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 	private JButton abortAtlasCreationButton;
 	private JButton pauseResumeDownloadButton;
 
+	/**
+	 * Call the constructor for instantiating without a controller
+	 * @param model
+	 */
+	public AtlasProgressFrame(AtlasProgressMonitorModel model) {
+		this(null, model);
+	}
+	
+	/**
+	 * This class requires a controller to which the ui can pass the abort
+	 * commands, or other such commands. It will not run without one.
+	 * 
+	 * However, instantiating without a controller should be fine, so long as 
+	 * a controller is set before any updates.
+	 * 
+	 * @param controller
+	 * @param model
+	 */
 	public AtlasProgressFrame(IAtlasCreationController controller, AtlasProgressMonitorModel model) {
 		super("Atlas creation in progress");
 		this.model = model;
@@ -308,48 +326,16 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 		pauseResumeDownloadButton.addActionListener(this);
 	}
 
-	public void initAtlas(AtlasInterface atlasInterface) {
+	public void begin(AtlasInterface atlasInterface) {
 		initialTotalTime = System.currentTimeMillis();
 		initialMapDownloadTime = -1;
 		updateGUI();
 		setVisible(true);
 		TIMER.schedule(updateTask, 0, 500);
 	}
+	
 
-	public void initMapDownload(MapInterface map) {
-		initialMapDownloadTime = System.currentTimeMillis();
-		updateGUI();
-	}
-
-	/**
-	 * Initialize the GUI progress bars
-	 * 
-	 * @param maxTilesToProcess
-	 */
-	public void initMapCreation(int maxTilesToProcess) {
-		updateGUI();
-	}
-
-	private String formatTime(long longSeconds) {
-		String timeString = "";
-
-		if (longSeconds < 0) {
-			timeString = "unknown";
-		} else {
-			int minutes = (int) (longSeconds / 60);
-			int seconds = (int) (longSeconds % 60);
-			if (minutes > 0)
-				timeString += Integer.toString(minutes) + " " + (minutes == 1 ? "minute" : "minutes") + " ";
-			timeString += Integer.toString(seconds) + " " + (seconds == 1 ? "second" : "seconds");
-		}
-		return timeString;
-	}
-
-	public void setZoomLevel(int theZoomLevel) {
-		mapDownloadTitle.setText(TEXT_MAP_DOWNLOAD + Integer.toString(theZoomLevel));
-	}
-
-	public void atlasCreationFinished() {
+	public void finished() {
 		finished = true;
 		stopUpdateTask();
 		forceUpdateGUI();
@@ -380,6 +366,26 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 		});
 	}
 
+	private String formatTime(long longSeconds) {
+		String timeString = "";
+
+		if (longSeconds < 0) {
+			timeString = "unknown";
+		} else {
+			int minutes = (int) (longSeconds / 60);
+			int seconds = (int) (longSeconds % 60);
+			if (minutes > 0)
+				timeString += Integer.toString(minutes) + " " + (minutes == 1 ? "minute" : "minutes") + " ";
+			timeString += Integer.toString(seconds) + " " + (seconds == 1 ? "second" : "seconds");
+		}
+		return timeString;
+	}
+//
+//	public void setZoomLevel(int theZoomLevel) {
+//		mapDownloadTitle.setText(TEXT_MAP_DOWNLOAD + Integer.toString(theZoomLevel));
+//	}
+
+
 	private synchronized void stopUpdateTask() {
 		try {
 			updateTask.cancel();
@@ -397,11 +403,7 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 			dispose();
 		}
 	}
-
-	public IAtlasCreationController getDownloadControlListener() {
-		return downloadController;
-	}
-
+	
 	public void setDownloadControlerListener(IAtlasCreationController threadControlListener) {
 		this.downloadController = threadControlListener;
 	}
@@ -475,16 +477,20 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 			atlasProgressBar.setValue(data.totalProgress);
 
 			try {
-				boolean pauseState = downloadController.isPaused();
 				String statusText = "RUNNING";
 				if (aborted)
 					statusText = "ABORTED";
 				else if (finished)
 					statusText = "FINISHED";
-				else if (pauseState)
-					statusText = "PAUSED";
-				else
-					statusText = "RUNNING";
+				else if( downloadController == null ) {
+					statusText = "UNKNOWN";
+				} else {
+					boolean pauseState = downloadController.isPaused();
+					if (pauseState)
+						statusText = "PAUSED";
+					else
+						statusText = "RUNNING";
+				}
 				statusLabel.setText("Status: " + statusText);
 
 				atlasPercent.setText(String.format(TEXT_TENTHPERCENT, data.totalProgressTenthPercent / 10.0));
@@ -492,7 +498,7 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 					String text = String.format(TEXT_PERCENT + " - processing atlas \"%s\" of type %s",
 							data.totalProgressTenthPercent / 10, data.atlas.getName(),
 							data.atlas.getOutputFormat());
-					if (pauseState)
+					if (downloadController != null && downloadController.isPaused())
 						text += " [PAUSED]";
 					AtlasProgressFrame.this.setTitle(text);
 				}
@@ -528,6 +534,7 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 
 			// map progress
 			mapCreation.setText("Map creation");
+			System.out.println("map creation: " + data.mapCreationProgress + "/" + data.mapCreationMax);
 			mapCreationProgressBar.setValue(data.mapCreationProgress);
 			mapCreationProgressBar.setMaximum(data.mapCreationMax);
 			atlasMapsDone.setText((data.currentMapNumber - 1) + " of " + data.totalNumberOfMaps + " done");
@@ -589,6 +596,11 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 		}
 
 	}
+	
+	/**
+	 * The following 3 methods are methods the controller calls
+	 * on the UI to inform it whats going on.
+	 */
 	
 	public void criticalError(Throwable t) {
 		SwingUtilities.invokeLater(new Runnable() {

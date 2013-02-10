@@ -147,7 +147,7 @@ public class OruxMapsSqlite extends OruxMaps implements RequiresSQLite {
 			mapDlTileProvider = ctp;
 			OruxMapTileBuilder mapTileBuilder = new OruxMapTileBuilder(this, new OruxMapTileWriterDB());
 			customTileCount = mapTileBuilder.getCustomTileCount();
-			atlasProgress.initMapCreation(mapTileBuilder.getCustomTileCount());
+			atlasProgress.initMapCreation(2*mapTileBuilder.getCustomTileCount());
 			mapTileBuilder.createTiles();
 		} finally {
 			ctp.cleanup();

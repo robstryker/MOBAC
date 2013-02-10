@@ -23,10 +23,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 
+import mobac.atlascreation.IAtlasThread;
 import mobac.exceptions.AtlasTestException;
 import mobac.exceptions.MapCreationException;
 import mobac.gui.AtlasProgress;
-import mobac.program.AtlasThread;
 import mobac.program.PauseResumeHandler;
 import mobac.program.atlascreators.tileprovider.TileProvider;
 import mobac.program.interfaces.AtlasInterface;
@@ -178,9 +178,9 @@ public abstract class AtlasCreator {
 		this.zoom = map.getZoom();
 		this.atlasOutputFormat = layer.getAtlas().getOutputFormat();
 		Thread t = Thread.currentThread();
-		if (!(t instanceof AtlasThread))
-			throw new RuntimeException("Calling thread must be AtlasThread!");
-		AtlasThread at = (AtlasThread) t;
+		if (!(t instanceof IAtlasThread))
+			throw new RuntimeException("Calling thread must be IAtlasThread!");
+		IAtlasThread at = (IAtlasThread) t;
 		atlasProgress = at.getAtlasProgress();
 		pauseResumeHandler = at.getPauseResumeHandler();
 	}

@@ -41,6 +41,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 
+import mobac.atlascreation.IAtlasProgressMonitor;
 import mobac.program.AtlasThread;
 import mobac.program.Logging;
 import mobac.program.interfaces.AtlasInterface;
@@ -152,6 +153,19 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	private static String TEXT_PERCENT = "%d%% done";
 	private static String TEXT_TENTHPERCENT = "%.1f%% done";
 
+	
+	/**
+	 * A migration field 
+	 */
+	private IAtlasProgressMonitor monitor;
+	
+	/**
+	 * A migration constructor which simply wraps a new progress monitor type
+	 */
+	public AtlasProgress(IAtlasProgressMonitor monitor) {
+		this.monitor = monitor;
+	}
+	
 	public AtlasProgress(AtlasThread atlasThread) {
 		super("Atlas creation in progress");
 		this.atlasThread = atlasThread;
@@ -323,6 +337,10 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	}
 
 	public void initAtlas(AtlasInterface atlasInterface) {
+		if( monitor != null ) {
+			monitor.initAtlas(atlasInterface);
+			return;
+		}
 		data.atlasInterface = atlasInterface;
 		if (atlasInterface.getOutputFormat().equals(AtlasOutputFormat.TILESTORE))
 			data.totalNumberOfTiles = (int) atlasInterface.calculateTilesToDownload();
@@ -351,6 +369,11 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	}
 
 	public void initMapDownload(MapInterface map) {
+		if( monitor != null ) {
+			monitor.initMapDownload(map);
+			return;
+		}
+
 		int index = mapInfos.indexOf(new MapInfo(map, 0, 0));
 		data.mapInfo = mapInfos.get(index);
 		data.totalProgress = data.mapInfo.tileCountOnStart;
@@ -371,6 +394,11 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	 * @param maxTilesToProcess
 	 */
 	public void initMapCreation(int maxTilesToProcess) {
+		if( monitor != null ) {
+			monitor.initMapCreation(maxTilesToProcess);
+			return;
+		}
+
 		data.mapCreationProgress = 0;
 		data.mapCreationMax = maxTilesToProcess;
 		initialMapDownloadTime = -1;
@@ -384,22 +412,43 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	}
 
 	public void incMapDownloadProgress() {
+		if( monitor != null ) {
+			monitor.incMapDownloadProgress();
+			return;
+		}
+
 		data.mapDownloadProgress++;
 		data.totalProgress++;
 		updateGUI();
 	}
 
 	public void incMapCreationProgress() {
+		// A clause for migration of apis
+		if( monitor != null ) {
+			monitor.incMapCreationProgress();
+			return;
+		}
 		setMapCreationProgress(data.mapCreationProgress + 1);
 	}
 
 	public void incMapCreationProgress(int stepSize) {
+		// A clause for migration of apis
+		if( monitor != null ) {
+			monitor.incMapCreationProgress(stepSize);
+			return;
+		}
 		setMapCreationProgress(data.mapCreationProgress + stepSize);
 	}
 
 	public void setMapCreationProgress(int progress) {
+		// A clause for migration of apis
+		if( monitor != null ) {
+			monitor.setMapCreationProgress(progress);
+			return;
+		}
+
 		data.mapCreationProgress = progress;
-		long creationProgressTiles = data.totalProgress = data.mapInfo.tileCountOnStart + data.mapInfo.mapTiles
+		data.totalProgress = data.mapInfo.tileCountOnStart + data.mapInfo.mapTiles
 				+ (int) (((long) data.mapInfo.mapTiles) * data.mapCreationProgress / data.mapCreationMax);
 		updateGUI();
 	}
@@ -409,6 +458,12 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	}
 
 	public void tileDownloaded(int size) {
+		// A clause for migration of apis
+		if( monitor != null ) {
+			monitor.tileDownloaded(size);
+			return;
+		}
+
 		synchronized (data) {
 			data.numberOfDownloadedBytes += size;
 		}
@@ -416,6 +471,12 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 	}
 
 	public void tileLoadedFromCache(int size) {
+		// A clause for migration of apis
+		if( monitor != null ) {
+			monitor.tileLoadedFromCache(size);
+			return;
+		}
+
 		synchronized (data) {
 			data.numberOfBytesLoadedFromCache += size;
 		}
@@ -730,7 +791,7 @@ public class AtlasProgress extends JFrame implements ActionListener, MapSourceLi
 		} catch (Exception e) {
 			log.error("The selection of look and feel failed!", e);
 		}
-		AtlasProgress ap = new AtlasProgress(null);
+		AtlasProgress ap = new AtlasProgress((AtlasThread)null);
 		ap.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		ap.setVisible(true);
 	}
