@@ -1,5 +1,8 @@
 package mobac;
 
+import java.io.File;
+import java.io.IOException;
+
 import javax.imageio.ImageIO;
 
 import mobac.atlascreation.AtlasCreationControllerThread;
@@ -24,6 +27,8 @@ import mobac.program.tilestore.TileStore;
 import mobac.utilities.GUIExceptionHandler;
 import mobac.utilities.GridSelectionUtility;
 import mobac.utilities.SystemPropertyUtils;
+
+import org.apache.commons.io.FileUtils;
 
 public class ScriptMain {
 
@@ -90,7 +95,7 @@ public class ScriptMain {
 		MainGUI.getMainGUI().previewMap.setSelectionByMapSelection(ms, true);
 		
 		// Add the selection to a layer
-		String layerName = System.getProperty(SystemPropertyUtils.NEW_ATLAS_NAME_SYSPROP);
+		final String layerName = System.getProperty(SystemPropertyUtils.NEW_ATLAS_NAME_SYSPROP);
 		new AddRectangleMapAutocut().addSelectionWithNewLayer(layerName, null);
 		
 		
@@ -105,6 +110,14 @@ public class ScriptMain {
 			AtlasProgressMonitorModel monitor = new AtlasProgressMonitorModel() {
 				public void atlasCreationFinished() {
 					super.atlasCreationFinished();
+					StringBuffer out = new StringBuffer();
+					out.append("retry errors: " + this.totalRetryErrors);
+					out.append("\npermanent errors: " + this.totalPermanentErrors);
+					try {
+						FileUtils.write(new File("atlases", layerName + "Errors.txt"), out.toString());
+					} catch(IOException ioe) {
+						ioe.printStackTrace();
+					}
 					new Thread() {
 						public void run() {
 							try {
@@ -175,7 +188,7 @@ public class ScriptMain {
 		passArg(sb, SystemPropertyUtils.MAP_GRID_ZOOM);
 		passArg(sb, SystemPropertyUtils.MAP_ZOOM);
 		passArg(sb, SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
-				
+		sb.append("-D" + SystemPropertyUtils.DOWNLOAD_JOB_THREAD_COUNT + "=5");
 		sb.append("-Dmobac.newAtlasName=" + squareId + " ");
 		sb.append("-Dmobac.mapInitialPosition=\"" + point.lat + "," + point.lon + "\" ");
 		sb.append("-Dmobac.mapInitialSelection=\"" + point.lat + "," + point.lon + "\" ");

@@ -9,27 +9,27 @@ import mobac.program.interfaces.MapInterface;
 import mobac.program.model.AtlasOutputFormat;
 
 public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
-	AtlasInterface atlas;
-	MapInterface currentMap;
-	MapProgressInfo mapInfo;
-	long numberOfDownloadedBytes = 0;
-	long numberOfBytesLoadedFromCache = 0;
-	int totalNumberOfTiles = 0;
-	int totalNumberOfMaps = 0;
-	int totalProgress = 0;
-	int totalProgressTenthPercent = -1;
-	int currentMapNumber = 0;
-	int mapDownloadProgress = 0;
-	int mapDownloadNumberOfTiles = 0;
-	int mapCreationProgress = 0;
-	int mapCreationMax = 0;
+	protected AtlasInterface atlas;
+	protected MapInterface currentMap;
+	protected MapProgressInfo mapInfo;
+	protected long numberOfDownloadedBytes = 0;
+	protected long numberOfBytesLoadedFromCache = 0;
+	protected int totalNumberOfTiles = 0;
+	protected int totalNumberOfMaps = 0;
+	protected int totalProgress = 0;
+	protected int totalProgressTenthPercent = -1;
+	protected int currentMapNumber = 0;
+	protected int mapDownloadProgress = 0;
+	protected int mapDownloadNumberOfTiles = 0;
+	protected int mapCreationProgress = 0;
+	protected int mapCreationMax = 0;
 	
-	int currentMapRetryErrors = 0;
-	int currentMapPermanentErrors = 0;
-	int currentMapJobsDone = 0;
-	int totalRetryErrors = 0;
-	int totalPermanentErrors = 0;
-	int totalJobsDone = 0;
+	protected int currentMapRetryErrors = 0;
+	protected int currentMapPermanentErrors = 0;
+	protected int currentMapJobsDone = 0;
+	protected int totalRetryErrors = 0;
+	protected int totalPermanentErrors = 0;
+	protected int totalJobsDone = 0;
 	
 	ArrayList<MapProgressInfo> mapInfos;
 	boolean finished = false;

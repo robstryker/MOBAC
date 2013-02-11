@@ -533,7 +533,6 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 
 			// map progress
 			mapCreation.setText("Map creation");
-			System.out.println("map creation: " + data.mapCreationProgress + "/" + data.mapCreationMax);
 			mapCreationProgressBar.setValue(data.mapCreationProgress);
 			mapCreationProgressBar.setMaximum(data.mapCreationMax);
 			atlasMapsDone.setText((data.currentMapNumber - 1) + " of " + data.totalNumberOfMaps + " done");
