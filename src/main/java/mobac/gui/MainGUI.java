@@ -668,9 +668,10 @@ public class MainGUI extends JFrame implements MapEventListener {
 		// Damnit.
 		
 		List<Integer> zoomList = null;
-		if( System.getProperty(SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST) != null ) {
-			String v = System.getProperty(SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
-			String[] selected = v.split(",");
+		String zoomListSysProp = System.getProperty(SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
+		
+		if( zoomListSysProp != null ) {
+			String[] selected = zoomListSysProp.split(",");
 			try {
 				ArrayList<Integer> zoomList2 = new ArrayList<Integer>();
 				for( int i = 0; i < selected.length; i++ ) {
@@ -680,21 +681,13 @@ public class MainGUI extends JFrame implements MapEventListener {
 			} catch(NumberFormatException nfe) {
 			}
 		}
-		int nextZoom = 0;
 		if( zoomList == null )
 			zoomList = settings.selectedZoomLevels;
 		if (zoomList != null) {
 			for (JZoomCheckBox currentZoomCb : cbZoom) {
-				for (int i = nextZoom; i < zoomList.size(); i++) {
-					int currentListZoom = zoomList.get(i);
-					System.out.println("i=" + i + ", current cb zoom level: " + currentZoomCb.getZoomLevel() + ", nextZoom=" + nextZoom + ", currentListZoom=" + currentListZoom);
-					if (currentZoomCb.getZoomLevel() == currentListZoom) {
-						System.out.println( "   selected");
-						currentZoomCb.setSelected(true);
-						nextZoom = 1;
-						break;
-					}
-				}
+				int level = currentZoomCb.getZoomLevel();
+				if( zoomList.contains(level))
+					currentZoomCb.setSelected(true);
 			}
 		}
 		coordinatesPanel.setNumberFormat(settings.coordinateNumberFormat);
