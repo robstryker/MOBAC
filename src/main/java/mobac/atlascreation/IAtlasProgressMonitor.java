@@ -69,4 +69,10 @@ public interface IAtlasProgressMonitor extends MapSourceListener {
 	 * @return
 	 */
 	public boolean isDone();
+	
+	public void incrementRetryErrors();
+	
+	public void incrementPermanentErrors();
+	
+	public void incrementJobsDone();
 }

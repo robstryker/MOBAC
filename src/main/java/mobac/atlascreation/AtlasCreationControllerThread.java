@@ -48,6 +48,7 @@ import mobac.program.model.AtlasOutputFormat;
 import mobac.program.model.Settings;
 import mobac.program.tilestore.TileStore;
 import mobac.utilities.GUIExceptionHandler;
+import mobac.utilities.SystemPropertyUtils;
 import mobac.utilities.tar.TarIndex;
 import mobac.utilities.tar.TarIndexedArchive;
 
@@ -75,15 +76,14 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 	private PauseResumeHandler pauseResumeHandler;
 
 	private int activeDownloads = 0;
-	private int jobsCompleted = 0;
-	private int jobsRetryError = 0;
-	private int jobsPermanentError = 0;
 	private int maxDownloadRetries = 1;
 
 	private boolean ignoreErrors = Settings.getInstance().ignoreDlErrors;
 	private IAtlasProgressMonitor monitor;
 	private IAtlasCreationUIProvider ui;
 	
+	
+	private int currentMapRetryErrors;
 	
 	public AtlasCreationControllerThread(AtlasInterface atlas, 
 			IAtlasProgressMonitor monitor, IAtlasCreationUIProvider ui) throws AtlasTestException {
@@ -188,9 +188,15 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		monitor.initAtlas(atlas);
 		ui.begin(atlas);
 
-		Settings s = Settings.getInstance();
-
-		downloadJobDispatcher = new JobDispatcher(s.downloadThreadCount, pauseResumeHandler, monitor);
+		String threadCount = System.getProperty(SystemPropertyUtils.DOWNLOAD_JOB_THREAD_COUNT);
+		int tCount = -1;
+		try {
+			tCount = Integer.parseInt(threadCount);
+		} catch(NumberFormatException nfe) {}
+		if( tCount == -1 )
+			tCount = Settings.getInstance().downloadThreadCount;
+		
+		downloadJobDispatcher = new JobDispatcher(tCount, pauseResumeHandler, monitor);
 		try {
 			for (LayerInterface layer : atlas) {
 				atlasCreator.initLayerCreation(layer);
@@ -253,15 +259,13 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		TarIndex tileIndex = null;
 		TarIndexedArchive tileArchive = null;
 
-		jobsCompleted = 0;
-		jobsRetryError = 0;
-		jobsPermanentError = 0;
-
 		monitor.initMapDownload(map);
 
 		if (currentThread().isInterrupted())
 			throw new InterruptedException();
 
+		currentMapRetryErrors = 0;
+		
 		// Prepare the tile store directory
 		// ts.prepareTileStore(map.getMapSource());
 
@@ -295,7 +299,7 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 				while (djp.isAlive() || (downloadJobDispatcher.getWaitingJobCount() > 0)
 						|| downloadJobDispatcher.isAtLeastOneWorkerActive()) {
 					Thread.sleep(500);
-					if (!failedMessageAnswered && (jobsRetryError > 50) && !ignoreErrors) {
+					if (!failedMessageAnswered && (currentMapRetryErrors > 50) && !ignoreErrors) {
 						pauseResumeHandler.pause();
 						
 						// TODO move this to the UI ***
@@ -396,7 +400,8 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 	public void jobFinishedSuccessfully(int bytesDownloaded) {
 		synchronized (this) {
 			activeDownloads--;
-			jobsCompleted++;
+			currentMapRetryErrors++;
+			monitor.incrementJobsDone();
 			monitor.incMapDownloadProgress();
 		}
 	}
@@ -405,21 +410,14 @@ public class AtlasCreationControllerThread extends Thread implements DownloadJob
 		synchronized (this) {
 			activeDownloads--;
 			if (retry)
-				jobsRetryError++;
+				monitor.incrementRetryErrors();
 			else {
-				jobsPermanentError++;
+				monitor.incrementPermanentErrors();
 				monitor.incMapDownloadProgress();
 			}
 		}
 		if (!ignoreErrors)
 			Toolkit.getDefaultToolkit().beep();
-	}
-
-	public int getJobsRetryErrorCount() {
-		return jobsRetryError;
-	}
-	public int getJobsPermanentErrorCount() {
-		return jobsPermanentError;
 	}
 	
 	public int getMaxDownloadRetries() {

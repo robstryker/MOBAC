@@ -56,4 +56,10 @@ public class SystemPropertyUtils {
 	 */
 	public static final String MAP_INITIAL_ZOOM_LIST = "mobac.initialZoomlist";
 
+	
+	/*
+	 * Set the initial list of zoom level checkboxes in comma-separated form
+	 */
+	public static final String DOWNLOAD_JOB_THREAD_COUNT = "mobac.download.threadCount";
+	
 }

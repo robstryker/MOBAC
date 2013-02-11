@@ -24,6 +24,13 @@ public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
 	int mapCreationProgress = 0;
 	int mapCreationMax = 0;
 	
+	int currentMapRetryErrors = 0;
+	int currentMapPermanentErrors = 0;
+	int currentMapJobsDone = 0;
+	int totalRetryErrors = 0;
+	int totalPermanentErrors = 0;
+	int totalJobsDone = 0;
+	
 	ArrayList<MapProgressInfo> mapInfos;
 	boolean finished = false;
 
@@ -57,6 +64,7 @@ public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
 		mapCreationProgress = 0;
 		mapDownloadProgress = 0;
 		currentMapNumber = index + 1;
+		this.currentMap = map;
 	}
 
 	/**
@@ -112,5 +120,23 @@ public class AtlasProgressMonitorModel implements IAtlasProgressMonitor {
 	@Override
 	public boolean isDone() {
 		return finished;
+	}
+
+	@Override
+	public void incrementRetryErrors() {
+		currentMapRetryErrors++;
+		totalRetryErrors++;
+	}
+
+	@Override
+	public void incrementPermanentErrors() {
+		currentMapPermanentErrors++;
+		totalPermanentErrors++;
+	}
+
+	@Override
+	public void incrementJobsDone() {
+		currentMapJobsDone++;
+		totalJobsDone++;
 	}
 }

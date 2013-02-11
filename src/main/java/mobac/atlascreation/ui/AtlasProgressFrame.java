@@ -45,7 +45,6 @@ import mobac.atlascreation.IAtlasCreationUIProvider;
 import mobac.gui.MainGUI;
 import mobac.program.AtlasThread;
 import mobac.program.interfaces.AtlasInterface;
-import mobac.program.interfaces.MapInterface;
 import mobac.program.model.Settings;
 import mobac.utilities.GBC;
 import mobac.utilities.OSUtilities;
@@ -566,13 +565,11 @@ public class AtlasProgressFrame extends JFrame implements ActionListener, IAtlas
 			activeDownloadsValue.repaint();
 
 			// TODO fix this
-//			int totalRetryableErrors = data.prevMapsRetryErrors + data.mapRetryErrors;
-//			retryableDownloadErrorsValue.setText(": current map: " + data.mapRetryErrors + ", total: "
-//					+ totalRetryableErrors);
-//			retryableDownloadErrorsValue.repaint();
-//			int totalPermanentErrors = data.prevMapsPermanentErrors + data.mapPermanentErrors;
-//			permanentDownloadErrorsValue.setText(": current map: " + data.mapPermanentErrors + ", total: "
-//					+ totalPermanentErrors);
+			retryableDownloadErrorsValue.setText(": current map: " + data.currentMapRetryErrors + ", total: "
+					+ data.totalRetryErrors);
+			permanentDownloadErrorsValue.setText(": current map: " + data.currentMapPermanentErrors + ", total: "
+					+ data.totalPermanentErrors);
+			retryableDownloadErrorsValue.repaint();
 			permanentDownloadErrorsValue.repaint();
 		}
 	}
