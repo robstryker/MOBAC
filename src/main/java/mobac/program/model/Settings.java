@@ -452,8 +452,10 @@ public class Settings {
 	@XmlTransient
 	public File getMapSourcesDirectory() {
 		// Add a system prop to override this via cmd line,; useful if running in scripts
-		if(System.getProperty(SystemPropertyUtils.MAPSOURCES_SYS_PROP) != null)
-			return new File(System.getProperty(SystemPropertyUtils.MAPSOURCES_SYS_PROP));
+		String mapSourcesCmdArg = System.getProperty(SystemPropertyUtils.MAPSOURCES_SYS_PROP); 
+		System.out.println("Map Sources value is " + mapSourcesCmdArg);
+		if(mapSourcesCmdArg != null)
+			return new File(mapSourcesCmdArg);
 		
 		String mapSourcesDirCfg = directories.mapSourcesDirectory;
 		File mapSourcesDir;

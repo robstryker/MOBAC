@@ -46,7 +46,6 @@ public class AddRectangleMapAutocut implements ActionListener {
 		
 		MainGUI mg = MainGUI.getMainGUI();
 		JAtlasTree jAtlasTree = mg.jAtlasTree;
-		final String mapNameFmt = "%s %02d";
 		AtlasInterface atlasInterface = jAtlasTree.getAtlas();
 		MapSource mapSource = mg.getSelectedMapSource();
 		SelectedZoomLevels sZL = mg.getSelectedZoomLevels();
@@ -55,26 +54,29 @@ public class AddRectangleMapAutocut implements ActionListener {
 			JOptionPane.showMessageDialog(mg, "Please select an area");
 			return;
 		}
-		Settings settings = Settings.getInstance();
-		// String errorText = mg.validateInput();
-		// if (errorText.length() > 0) {
-		// JOptionPane.showMessageDialog(mg, errorText, "Errors", JOptionPane.ERROR_MESSAGE);
-		// return;
-		// }
-
 		int[] zoomLevels = sZL.getZoomLevels();
 		if (zoomLevels.length == 0) {
 			JOptionPane.showMessageDialog(mg, "Please select at least one zoom level");
 			return;
 		}
+		TileImageParameters customTileParameters = mg.getSelectedTileImageParameters();
+		Layer l = addSelectionWithNewLayer(atlasInterface, mapSource, 
+				suggestedLayerName, ms, zoomLevels, customTileParameters);
+		jAtlasTree.getTreeModel().notifyNodeInsert(l);
 
+	}
+	
+	public Layer  addSelectionWithNewLayer(AtlasInterface atlas, MapSource source, String suggestedLayerName, 
+			MapSelection ms, int[] zoomLevels, TileImageParameters customTileParameters) {
+		Settings settings = Settings.getInstance();
+		final String mapNameFmt = "%s %02d";
 		String layerName = suggestedLayerName;
 		Layer layer = null;
 		int c = 1;
 		boolean success = false;
 		do {
 			try {
-				layer = new Layer(atlasInterface, layerName);
+				layer = new Layer(atlas, layerName);
 				success = true;
 			} catch (InvalidNameException e) {
 				layerName = suggestedLayerName + "_" + Integer.toString(c++);
@@ -83,17 +85,15 @@ public class AddRectangleMapAutocut implements ActionListener {
 		for (int zoom : zoomLevels) {
 			Point tl = ms.getTopLeftPixelCoordinate(zoom);
 			Point br = ms.getBottomRightPixelCoordinate(zoom);
-			TileImageParameters customTileParameters = mg.getSelectedTileImageParameters();
 			try {
 				String mapName = String.format(mapNameFmt, new Object[] { layerName, zoom });
-				layer.addMapsAutocut(mapName, mapSource, tl, br, zoom, customTileParameters, settings.maxMapSize, settings.mapOverlapTiles);
+				layer.addMapsAutocut(mapName, source, tl, br, zoom, customTileParameters, settings.maxMapSize, settings.mapOverlapTiles);
 			} catch (InvalidNameException e) {
 				Logging.LOG.error("", e);
 			}
 		}
-		atlasInterface.addLayer(layer);
-		jAtlasTree.getTreeModel().notifyNodeInsert(layer);
-
+		atlas.addLayer(layer);
+		return layer;
 	}
 
 }

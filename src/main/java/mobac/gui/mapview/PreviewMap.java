@@ -41,7 +41,6 @@ import mobac.program.model.MapSelection;
 import mobac.program.model.MercatorPixelCoordinate;
 import mobac.program.model.Settings;
 import mobac.utilities.GridSelectionUtility;
-import mobac.utilities.MyMath;
 import mobac.utilities.SystemPropertyUtils;
 
 import org.apache.log4j.Logger;
@@ -153,6 +152,7 @@ public class PreviewMap extends JMapViewer {
 		zoom = zoom == -1 ? settings.mapviewZoom : zoom;
 
 		EastNorthCoordinate c = createCoordinates(System.getProperty(SystemPropertyUtils.MAP_INITIAL_POSITION));
+		
 		if( c == null )
 			c = settings.mapviewCenterCoordinate;
 		setDisplayPositionByLatLon(c, zoom);
@@ -166,25 +166,7 @@ public class PreviewMap extends JMapViewer {
 	}
 	
 	private MapSelection createInitialMapSelection(String sysprop) {
-		if( sysprop == null)
-			return null;
-		String[] split = sysprop.split(",");
-		try {
-			Double d1 = Double.parseDouble(split[0]);
-			Double d2 = Double.parseDouble(split[1]);
-			EastNorthCoordinate min = new EastNorthCoordinate(d1.doubleValue(), d2.doubleValue());//34,104;
-			EastNorthCoordinate max = min;
-			if( split.length == 4 ) {
-				Double d3 = Double.parseDouble(split[2]);
-				Double d4 = Double.parseDouble(split[3]);
-				max = new EastNorthCoordinate(d3.doubleValue(), d4.doubleValue());//34,104;
-			}
-			MapSelection ms = new MapSelection(MainGUI.getMainGUI().previewMap.getMapSource(), min, max);
-			return ms;
-		} catch(NumberFormatException nfe) {
-			return null;
-		}
-		
+		return GridSelectionUtility.createMapSelectionFromCSV(MainGUI.getMainGUI().previewMap.getMapSource(), sysprop);
 	}
 	
 	private EastNorthCoordinate createCoordinates(String initial) {
@@ -483,6 +465,8 @@ public class PreviewMap extends JMapViewer {
 		} else {
 			coords = GridSelectionUtility.asPixelCoordinates(mapSource, iSelectionMin, iSelectionMax);
 		}
+		if( coords == null )
+			return;
 		// log.debug("sel min: [" + min + "]");
 		// log.debug("sel max: [" + max + "]");
 		for (MapEventListener listener : mapEventListeners)

@@ -1,7 +1,9 @@
 package mobac.utilities;
 
 import java.awt.Point;
+import java.util.ArrayList;
 
+import mobac.gui.MainGUI;
 import mobac.gui.mapview.PreviewMap;
 import mobac.program.interfaces.MapSource;
 import mobac.program.interfaces.MapSpace;
@@ -79,6 +81,8 @@ public class GridSelectionUtility {
 	 * @return
 	 */
 	public static MercatorPixelCoordinate[] asPixelCoordinates(MapSource mapSource, Point iSelectionMin, Point iSelectionMax) {
+		if( iSelectionMin == null || iSelectionMax == null )
+			return null;
 		int x_min, y_min, x_max, y_max;
 		x_min = iSelectionMin.x;
 		y_min = iSelectionMin.y;
@@ -143,5 +147,48 @@ public class GridSelectionUtility {
 			working = getAdjacentGridPoint(source, space, zoom, working, direction);
 		}
 		return working;
+	}
+	
+	/**
+	 * Create a series of east-north coordinates based on a comma-separated list
+	 * @param commaSeparated
+	 * @return
+	 */
+	public static EastNorthCoordinate[] createEastNorthCoordinatesFromCSV(String commaSeparated) {
+		if( commaSeparated == null )
+			return new EastNorthCoordinate[0];
+		
+		String[] split = commaSeparated.split(",");
+		if( split.length % 2 == 1 )
+			throw new IllegalArgumentException();
+		
+		try {
+			ArrayList<EastNorthCoordinate> coords = new ArrayList<EastNorthCoordinate>();
+			for( int i = 0; i < split.length / 2; i++ ) {
+				Double d1 = Double.parseDouble(split[(2*i)]);
+				Double d2 = Double.parseDouble(split[(2*i)+1]);
+				EastNorthCoordinate coord = new EastNorthCoordinate(d1.doubleValue(), d2.doubleValue());
+				coords.add(coord);
+			}
+			return (EastNorthCoordinate[]) coords.toArray(new EastNorthCoordinate[coords.size()]);
+		} catch(NumberFormatException nfe) {
+			return new EastNorthCoordinate[0];
+		}
+	}
+	public static MapSelection createMapSelectionFromCSV(MapSource source, String commaSeparated) {
+		System.out.println("INSIDE createMapSelectionFromCSV");
+		System.out.println("CSV is " + commaSeparated);
+		EastNorthCoordinate[] coords = GridSelectionUtility.createEastNorthCoordinatesFromCSV(commaSeparated);
+		if( coords == null || coords.length == 0 )
+			return null;
+		EastNorthCoordinate min, max;
+		if( coords.length == 1) {
+			min = max = coords[0];
+		} else {
+			min = coords[0];
+			max = coords[1];
+		}
+		MapSelection ms = new MapSelection(source, min, max);
+		return ms;
 	}
 }
