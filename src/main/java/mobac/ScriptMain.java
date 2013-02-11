@@ -1,5 +1,7 @@
 package mobac;
 
+import javax.imageio.ImageIO;
+
 import mobac.atlascreation.AtlasCreationControllerThread;
 import mobac.atlascreation.IAtlasCreationUIProvider;
 import mobac.atlascreation.ui.AtlasProgressFrame;
@@ -7,16 +9,43 @@ import mobac.atlascreation.ui.AtlasProgressMonitorModel;
 import mobac.exceptions.AtlasTestException;
 import mobac.gui.MainGUI;
 import mobac.gui.actions.AddRectangleMapAutocut;
+import mobac.mapsources.DefaultMapSourcesManager;
+import mobac.mapsources.MapSourcesManager;
+import mobac.program.DirectoryManager;
+import mobac.program.EnvironmentSetup;
+import mobac.program.Logging;
+import mobac.program.ProgramInfo;
 import mobac.program.interfaces.AtlasInterface;
 import mobac.program.interfaces.MapSource;
 import mobac.program.model.EastNorthCoordinate;
 import mobac.program.model.MapSelection;
 import mobac.program.model.Settings;
+import mobac.program.tilestore.TileStore;
+import mobac.utilities.GUIExceptionHandler;
 import mobac.utilities.GridSelectionUtility;
 import mobac.utilities.SystemPropertyUtils;
 
 public class ScriptMain {
 
+	private static void headLessInit() {
+		DirectoryManager.initialize();
+		Logging.configureLogging();
+
+		// MySocketImplFactory.install();
+		ProgramInfo.initialize(); // Load revision info
+		Logging.logSystemInfo();
+		GUIExceptionHandler.installToolkitEventQueueProxy();
+		// Logging.logSystemProperties();
+		ImageIO.setUseCache(false);
+		EnvironmentSetup.checkMemory();
+		EnvironmentSetup.checkFileSetup();
+		Settings.loadOrQuit();
+		EnvironmentSetup.copyMapPacks();
+		DefaultMapSourcesManager.initialize();
+		EnvironmentSetup.createDefaultAtlases();
+		TileStore.initialize();
+	}
+	
 	private static void initUI(String[] args) {
 		StartMOBAC.main(args);
 		
@@ -42,14 +71,16 @@ public class ScriptMain {
 	public static void main(String[] args) {
 		// Start via the other start class
 		System.out.println("Beginning ScriptMain");
-		initUI(args);
-		System.out.println("UI Initialized");
 		
 		if( args.length > 0 ) {
+			headLessInit();
 			generateCommandList();
 			return;
 		}
+
 		
+		initUI(args);
+		System.out.println("UI Initialized");
 		
 		Settings.getInstance().maxMapSize = 1048575;
 		// Ensure our grid is selected
@@ -114,9 +145,16 @@ public class ScriptMain {
 		System.out.println("___ ScriptMain command output");
 		for( int i = 0; i < columnsTotal; i++ ) {
 			for( int j = 0; j < rowsTotal; j++ ) {
-				MapSource source = MainGUI.getMainGUI().previewMap.getMapSource();
-				int zoom = MainGUI.getMainGUI().previewMap.getZoom();
-				EastNorthCoordinate point = moveGrid(source, zoom, NECorner, i, j);
+				MapSource mapSource = MapSourcesManager.getInstance().getSourceByName(System.getProperty(SystemPropertyUtils.MAP_SOURCE));
+				String zoomOverride = System.getProperty(SystemPropertyUtils.MAP_ZOOM);
+				int zoom = -1;
+				if( zoomOverride != null && zoomOverride.length() > 0) {
+					try {
+						zoom = Integer.parseInt(zoomOverride);
+					} catch(NumberFormatException nfe) {}
+				}
+				zoom = zoom == -1 ? Settings.getInstance().mapviewZoom : zoom;
+				EastNorthCoordinate point = moveGrid(mapSource, zoom, NECorner, i, j);
 				currentLetter = (char)(initialLetter + i);
 				String squareId = ("" + currentLetter) + (initialRow+j);
 				outputCommand(squareId, point);
@@ -153,7 +191,7 @@ public class ScriptMain {
 	}
 	
 	private static EastNorthCoordinate moveGrid(MapSource source, int zoom, EastNorthCoordinate origin, int x, int y) {
-		EastNorthCoordinate next = GridSelectionUtility.getDistanceGridPoint(source, source.getMapSpace(), MainGUI.getMainGUI().previewMap.getZoom(), origin, GridSelectionUtility.WEST, x);
-		return GridSelectionUtility.getDistanceGridPoint(source, source.getMapSpace(), MainGUI.getMainGUI().previewMap.getZoom(), next, GridSelectionUtility.SOUTH, y);
+		EastNorthCoordinate next = GridSelectionUtility.getDistanceGridPoint(source, source.getMapSpace(), zoom, origin, GridSelectionUtility.WEST, x);
+		return GridSelectionUtility.getDistanceGridPoint(source, source.getMapSpace(), zoom, next, GridSelectionUtility.SOUTH, y);
 	}
 }

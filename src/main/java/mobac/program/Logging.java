@@ -149,7 +149,14 @@ public class Logging {
 		logger.addHandler(h);
 	}
 
+	@Deprecated
 	public static void logSystemInfo() {
+		logSystemInfo(null);
+	}
+	public static void logSystemInfo(String[] args) {
+		if( args == null )
+			args = new String[0];
+		
 		Logger log = Logger.getLogger("SysInfo");
 		if (log.isInfoEnabled()) {
 			String n = System.getProperty("line.separator");
@@ -168,9 +175,9 @@ public class Logging {
 					+ n + "userAppDataDir: \t" + DirectoryManager.userAppDataDir /**/
 			);
 			log.info("System console available: " + (System.console() != null));
-			log.info("Startup arguments (count=" + StartMOBAC.ARGS.length + "):");
-			for (int i = 0; i < StartMOBAC.ARGS.length; i++)
-				log.info("\t" + i + ": " + StartMOBAC.ARGS[i]);
+			log.info("Startup arguments (count=" + args.length + "):");
+			for (int i = 0; i < args.length; i++)
+				log.info("\t" + i + ": " + args[i]);
 		}
 		if (log.isDebugEnabled()) {
 			log.debug("Detected operating system: " + OSUtilities.detectOs() + " (" + System.getProperty("os.name")

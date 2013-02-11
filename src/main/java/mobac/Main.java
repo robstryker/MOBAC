@@ -55,7 +55,7 @@ public class Main {
 
 			// MySocketImplFactory.install();
 			ProgramInfo.initialize(); // Load revision info
-			Logging.logSystemInfo();
+			Logging.logSystemInfo(StartMOBAC.ARGS);
 			GUIExceptionHandler.installToolkitEventQueueProxy();
 			// Logging.logSystemProperties();
 			ImageIO.setUseCache(false);
