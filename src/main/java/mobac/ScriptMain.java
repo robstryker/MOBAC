@@ -168,26 +168,27 @@ public class ScriptMain {
 	private static void outputCommand(String squareId, EastNorthCoordinate point) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("java -Xms64m -Xmx1024M ");
-		sb.append("-Dmobac.mapsources.dir=/home/rob/apps/MOBAC/app/mapsources ");
-		sb.append("-Dmobac.forceNewAtlas=true ");
-		sb.append("-Dmobac.newAtlasOutputFormat=OruxMapsSqlite ");
-		sb.append("-Dmobac.mapSourceOverride=\"Google Maps China\" ");
-		sb.append("-Dmobac.mapGridZoomOverride=7 ");
-		sb.append("-Dmobac.mapZoomOverride=4 ");
-		sb.append("-Dmobac.initialZoomlist=16,14,12,10,9,8,7,6,5 ");
+		passArg(sb, SystemPropertyUtils.MAPSOURCES_SYS_PROP);
+		passArg(sb, SystemPropertyUtils.FORCE_NEW_ATLAS_SYSPROP);
+		passArg(sb, SystemPropertyUtils.NEW_ATLAS_FORMAT_SYSPROP);
+		passArg(sb, SystemPropertyUtils.MAP_SOURCE);
+		passArg(sb, SystemPropertyUtils.MAP_GRID_ZOOM);
+		passArg(sb, SystemPropertyUtils.MAP_ZOOM);
+		passArg(sb, SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
+				
 		sb.append("-Dmobac.newAtlasName=" + squareId + " ");
 		sb.append("-Dmobac.mapInitialPosition=\"" + point.lat + "," + point.lon + "\" ");
 		sb.append("-Dmobac.mapInitialSelection=\"" + point.lat + "," + point.lon + "\" ");
 		sb.append("-cp Mobile_Atlas_Creator.jar:lib/* mobac.ScriptMain");
-		
-		StringBuffer sb2 = new StringBuffer();
-		sb2.append("id=");
-		sb2.append(squareId);
-		sb2.append(", loc=");
-		sb2.append(point.lat);
-		sb2.append(",");
-		sb2.append(point.lon);
 		System.out.println(sb.toString());
+	}
+	
+	private static void passArg(StringBuffer sb, String prop) {
+		sb.append("-D");
+		sb.append(prop);
+		sb.append("=\"");
+		sb.append(System.getProperty(prop));
+		sb.append("\" ");
 	}
 	
 	private static EastNorthCoordinate moveGrid(MapSource source, int zoom, EastNorthCoordinate origin, int x, int y) {

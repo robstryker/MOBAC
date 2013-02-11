@@ -8,6 +8,10 @@ package mobac.utilities;
  */
 public class SystemPropertyUtils {
 
+	/**
+	 * This is specifically for designating what directory your 
+	 * map sources are stored in!
+	 */
 	public static final String MAPSOURCES_SYS_PROP = "mobac.mapsources.dir";
 
 	/*
@@ -21,6 +25,7 @@ public class SystemPropertyUtils {
 	/* 
 	 * A system property for setting the map source to be used. 
 	 * This will OVERRIDE the settings. Settings will be ignored if this value is valid
+	 * This is for which map source to use, NOT WHERE YOUR MAP SOURCES ARE LOCATED
 	 */
 	public static final String MAP_SOURCE = "mobac.mapSourceOverride";
 	
