@@ -46,6 +46,7 @@ public class AtlasNew implements ActionListener {
 
 		INewAtlasProvider provider = new UINewAtlasProvider();
 		String cmd = System.getProperty(SystemPropertyUtils.FORCE_NEW_ATLAS_SYSPROP);
+		System.out.println("Checking force new atlas: has value " + cmd);
 		if( cmd != null && cmd.equals("true")) {
 			provider = new CmdLineNewAtlasProvider();
 		}
