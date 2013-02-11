@@ -188,7 +188,7 @@ public class ScriptMain {
 		passArg(sb, SystemPropertyUtils.MAP_GRID_ZOOM);
 		passArg(sb, SystemPropertyUtils.MAP_ZOOM);
 		passArg(sb, SystemPropertyUtils.MAP_INITIAL_ZOOM_LIST);
-		sb.append("-D" + SystemPropertyUtils.DOWNLOAD_JOB_THREAD_COUNT + "=5");
+		sb.append("-D" + SystemPropertyUtils.DOWNLOAD_JOB_THREAD_COUNT + "=5 ");
 		sb.append("-Dmobac.newAtlasName=" + squareId + " ");
 		sb.append("-Dmobac.mapInitialPosition=\"" + point.lat + "," + point.lon + "\" ");
 		sb.append("-Dmobac.mapInitialSelection=\"" + point.lat + "," + point.lon + "\" ");
