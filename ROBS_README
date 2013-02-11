@@ -1,0 +1,18 @@
+To build, execute:
+
+ant clean_build svnversion build build_mapsources sign_mapsources create_jar
+
+This removes the optimizations of shrinking the package, which somehow makes most of my new classes not included
+
+To generate a list of commands to run for a very large area, run:
+
+java -Xms64m -Xmx1024M -Dmobac.mapsources.dir=/home/rob/apps/MOBAC/app/mapsources -Dmobac.forceNewAtlas=true -Dmobac.newAtlasOutputFormat=OruxMapsSqlite -Dmobac.mapSourceOverride="Google Maps China" -Dmobac.mapGridZoomOverride=7 -Dmobac.mapZoomOverride=4 -Dmobac.initialZoomlist=16,14,12,10,9,8,7,6,5 -Dmobac.mapInitialPosition="39.912,116.581" -cp Mobile_Atlas_Creator.jar  mobac.ScriptMain generate
+
+This will generate a list of commands you can run which split the 
+map into grid-level 7 boxes. The initial position is where you want to 
+begin.
+
+Currently some values still hard-coded, specifically, it will 
+generate an 8x7 grid from your starting point, moving west and south. 
+
+
